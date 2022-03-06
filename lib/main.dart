@@ -4,15 +4,17 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:mywaylearn/firebase_options.dart';
 import 'package:mywaylearn/view/login_view.dart';
+import 'package:mywaylearn/view/register_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(MaterialApp(
     title: 'Flutter Demo',
     theme: ThemeData(
-      primarySwatch: Colors.orange,
+      primarySwatch: Colors.purple,
     ),
     // home: const RegisterView(),
+    // home: const LoginView(),
     home: const HomePage(),
   ));
 }
@@ -36,7 +38,11 @@ class HomePage extends StatelessWidget {
               if (emailVerified) {
                 print('You are verified user');
               } else {
-                print('You are not verified user, Please verify your email.');
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const VerifyEmailView(),
+                  )
+                );
               }
               return const Text('Done');
             default:
@@ -44,6 +50,37 @@ class HomePage extends StatelessWidget {
           }
         },
       ),
+    );
+  }
+}
+
+class VerifyEmailView extends StatefulWidget {
+  const VerifyEmailView({ Key? key }) : super(key: key);
+
+  @override
+  State<VerifyEmailView> createState() => _VerifyEmailViewState();
+}
+
+class _VerifyEmailViewState extends State<VerifyEmailView> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Verify Email'),
+        backgroundColor: Colors.purple.shade200,
+      ),
+      body: Column(
+        children: [
+          const Text('Please verify your email address'),
+          TextButton(
+            onPressed: () async {
+              final user = await FirebaseAuth.instance.currentUser;
+              user?.sendEmailVerification();
+            },
+            child: const Text('Send Email Verification'),
+          )
+        ],
+      )
     );
   }
 }
