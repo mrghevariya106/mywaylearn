@@ -11,8 +11,8 @@ void main() {
     theme: ThemeData(
       primarySwatch: Colors.orange,
     ),
-    // home: const RegisterView(),
-    home: const LoginView(),
+    home: const RegisterView(),
+    // home: const LoginView(),
   ));
 }
 
@@ -76,10 +76,19 @@ class _RegisterViewState extends State<RegisterView> {
                     onPressed: () async {
                       final email = _email.text;
                       final password = _password.text;
-                      final userCredential = await FirebaseAuth.instance
-                          .createUserWithEmailAndPassword(
-                              email: email, password: password);
-                      print(userCredential);
+                      try{
+                        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password);
+                        print(userCredential);
+                      } on FirebaseAuthException catch (e) {
+                        print(e.code);
+                        if(e.code == 'weak-password') {
+                          print('To Weak Password.');
+                        } else if (e.code == 'email-already-in-use') {
+                          print('Email alredy in use. Please try with a different email.');
+                        } else if (e.code == 'invalid-email') {
+                          print('Invalid Email Address');
+                        }
+                      }
                     },
                     child: const Text('Register'),
                   ),
