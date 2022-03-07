@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mywaylearn/firebase_options.dart';
 import 'package:mywaylearn/view/login_view.dart';
 import 'package:mywaylearn/view/register_view.dart';
+import 'package:mywaylearn/view/verify_email_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,48 +37,21 @@ class HomePage extends StatelessWidget {
         switch (snapshot.connectionState) {
           case ConnectionState.done:
             final user = FirebaseAuth.instance.currentUser;
-            final emailVerified = user?.emailVerified ?? false;
             print(user);
-            // if (emailVerified) {
-            //   return const Text('Done');
-            // } else {
-            //   return const VerifyEmailView();
-            // }
-            return const LoginView();
+            if (user != null) {
+              if (user.emailVerified) {
+                print('Email is verified');
+              } else {
+                return const VerifyEmailView();
+              }
+            } else {
+              return const LoginView();
+            }
+            return const Text('Done');
           default:
             return const CircularProgressIndicator();
         }
       },
-    );
-  }
-}
-
-class VerifyEmailView extends StatefulWidget {
-  const VerifyEmailView({Key? key}) : super(key: key);
-
-  @override
-  State<VerifyEmailView> createState() => _VerifyEmailViewState();
-}
-
-class _VerifyEmailViewState extends State<VerifyEmailView> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verify Email'),
-      ),
-      body: Column(
-        children: [
-          const Text('Please verify your email address'),
-          TextButton(
-            onPressed: () async {
-              final user = await FirebaseAuth.instance.currentUser;
-              user?.sendEmailVerification();
-            },
-            child: const Text('Send Email Verification'),
-          )
-        ],
-      ),
     );
   }
 }
