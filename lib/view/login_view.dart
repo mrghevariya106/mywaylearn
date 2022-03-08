@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
 
 import 'package:mywaylearn/constants/routes.dart';
+
+import '../utilites/show_error_dialog.dart';
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
 
@@ -70,10 +72,14 @@ class _LoginViewState extends State<LoginView> {
               } on FirebaseAuthException catch (e) {
                 // devtools.log(e.code.toString());
                 if (e.code == 'user-not-found') {
-                  devtools.log('User is not Exist. Please register first.');
+                  await showErrorDialog(context,'User is not Exist. Please register first.');
                 } else if (e.code == 'wrong-password') {
-                  devtools.log('Wrong Password. Please try again.');
-                }
+                  await showErrorDialog(context,'Wrong Password. Please try again.');
+                } else {
+                  await showErrorDialog(context,'Error: ${e.code}');
+                } 
+              } catch (e) {
+                  await showErrorDialog(context,e.toString());
               }
             },
             child: const Text('Login'),
