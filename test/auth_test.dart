@@ -34,27 +34,27 @@ void main() {
         await provider.initialize();
         expect(provider.isInitialized, true);
       },
-      timeout: const Timeout(Duration(seconds: 6)),
+      timeout: const Timeout(Duration(seconds: 2)),
     );
 
-    test('Create user will get deleget to login function', () async {
-      final badEmailUser = await provider.createUser(
-        email: 'abc@abc.com',
-        password: 'abc123',
+    test('Create user should deleget to login function', () async {
+      final badEmailUser = provider.createUser(
+        email: 'foo@bar.com',
+        password: 'anypassword',
       );
       expect(badEmailUser,
           throwsA(const TypeMatcher<UserNotFoundAuthException>()));
 
-      final badPasswordUser = await provider.createUser(
-        email: 'abc@abc.com',
-        password: 'abc123',
+      final badPasswordUser = provider.createUser(
+        email: 'someone@abc.com',
+        password: 'foobar',
       );
       expect(badPasswordUser,
           throwsA(const TypeMatcher<WrongPasswordAuthException>()));
 
       final user = await provider.createUser(
-        email: 'email',
-        password: 'password',
+        email: 'foo',
+        password: 'bar',
       );
       expect(provider.currentUser, user);
       expect(user.isEmailVerified, false);
@@ -63,7 +63,7 @@ void main() {
     test('Login user should be verified', () {
       provider.sendEmailVerification();
       final user = provider.currentUser;
-      expect(user, null);
+      expect(user, isNotNull);
       expect(user!.isEmailVerified, true);
     });
 
@@ -92,8 +92,8 @@ class MockAuthProvider implements AuthProvider {
     required String email,
     required String password,
   }) async {
-    if (isInitialized) throw NotInitializedException();
-    await Future.delayed(const Duration(seconds: 5));
+    if (!isInitialized) throw NotInitializedException();
+    await Future.delayed(const Duration(seconds: 1));
     return logIn(
       email: email,
       password: password,
@@ -115,8 +115,8 @@ class MockAuthProvider implements AuthProvider {
     required String password,
   }) {
     if (!isInitialized) throw NotInitializedException();
-    if (email == 'abc@abc.com') throw UserNotFoundAuthException();
-    if (password == 'abc123') throw WrongPasswordAuthException();
+    if (email == 'foo@bar.com') throw UserNotFoundAuthException();
+    if (password == 'foobar') throw WrongPasswordAuthException();
     const user = AuthUser(isEmailVerified: false);
     _user = user;
     return Future.value(user);
