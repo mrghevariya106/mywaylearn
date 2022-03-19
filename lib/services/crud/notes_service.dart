@@ -4,7 +4,15 @@ import 'package:path/path.dart' show join;
 
 class DatabaseAlreadyExistsException implements Exception {}
 
-class UnableToGetDocumentsDirectory implements Exception {}
+class UnableToGetDocumentsDirectoryException implements Exception {}
+
+class DataTableNotOpenException implements Exception {}
+
+class CouldNotDeleteUserException implements Exception {}
+
+class UserAlredyExistsException implements Exception {}
+
+class UserNotExistException implements Exception {}
 
 class NotesService {
   Database? _db;
@@ -18,27 +26,83 @@ class NotesService {
       final dbPath = join(docsPath.path, dbName);
       final db = await openDatabase(dbPath);
       _db = db;
-
-      const createUserTable = '''CREATE TABLE IF NOT EXISTS "user" (
-        "id"	INTEGER NOT NULL,
-        "email"	TEXT NOT NULL UNIQUE,
-        PRIMARY KEY("id" AUTOINCREMENT)
-      );''';
-
+      // create user table
       await db.execute(createUserTable);
-
-      const createNoteTable = '''CREATE TABLE IF NOT EXISTS "notes" (
-        "id"	INTEGER NOT NULL,
-        "user_id"	INTEGER NOT NULL,
-        "text"	TEXT,
-        "is_synced_with_cloud"	INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY("user_id") REFERENCES "user"("id"),
-        PRIMARY KEY("id" AUTOINCREMENT)
-      );''';
-
+      // create notes table
       await db.execute(createNoteTable);
     } on MissingPlatformDirectoryException {
-      throw UnableToGetDocumentsDirectory();
+      throw UnableToGetDocumentsDirectoryException();
+    }
+  }
+
+  Future<void> close() async {
+    final db = _db;
+    if (db == null) {
+      throw DataTableNotOpenException();
+    } else {
+      await db.close();
+      _db = null;
+    }
+  }
+
+  Database _getDatabaseOrThrow() {
+    final db = _db;
+    if (db == null) {
+      throw DataTableNotOpenException();
+    } else {
+      return db;
+    }
+  }
+
+  Future<void> deleteUser({required String email}) async {
+    final db = _getDatabaseOrThrow();
+    final deletedCount = await db.delete(
+      userTable,
+      where: 'email = ?',
+      whereArgs: [email.toLowerCase()],
+    );
+    if (deletedCount != 1) {
+      throw CouldNotDeleteUserException();
+    }
+  }
+
+  Future<DatabaseUser> createUser({required String email}) async {
+    final db = _getDatabaseOrThrow();
+    final result = await db.query(
+      userTable,
+      limit: 1,
+      where: 'email = ?',
+      whereArgs: [email.toLowerCase()],
+    );
+
+    if (result.isNotEmpty) {
+      throw UserAlredyExistsException();
+    }
+
+    final userID = await db.insert(userTable, {
+      emailColumn: email.toLowerCase(),
+    });
+
+    return DatabaseUser(
+      id: userID,
+      email: email,
+    );
+  }
+
+  Future<DatabaseUser> getUser({required String email}) async {
+    final db = _getDatabaseOrThrow();
+
+    final results = await db.query(
+      userTable,
+      limit: 1,
+      where: 'email = ?',
+      whereArgs: [email.toLowerCase()],
+    );
+
+    if (results.isEmpty) {
+      throw UserNotExistException();
+    } else {
+      return DatabaseUser.fromRow(results.first);
     }
   }
 }
@@ -52,7 +116,7 @@ class DatabaseUser {
     required this.email,
   });
 
-  DatabaseUser.fromRow(Map<String, Object> map)
+  DatabaseUser.fromRow(Map<String, Object?> map)
       : id = map[idColumn] as int,
         email = map[emailColumn] as String;
 
@@ -79,7 +143,7 @@ class DatabaseNotes {
     required this.isSyncedWithCloud,
   });
 
-  DatabaseNotes.fromRows(Map<String, Object> map)
+  DatabaseNotes.fromRows(Map<String, Object?> map)
       : id = map[idColumn] as int,
         userId = map[userIdColumn] as int,
         text = map[textColumn] as String,
@@ -105,3 +169,16 @@ const emailColumn = 'email';
 const userIdColumn = 'user_id';
 const textColumn = 'text';
 const isSyncedWithCloudColumn = 'is_synced_with_cloud';
+const createUserTable = '''CREATE TABLE IF NOT EXISTS "user" (
+  "id"	INTEGER NOT NULL,
+  "email"	TEXT NOT NULL UNIQUE,
+  PRIMARY KEY("id" AUTOINCREMENT)
+);''';
+const createNoteTable = '''CREATE TABLE IF NOT EXISTS "notes" (
+  "id"	INTEGER NOT NULL,
+  "user_id"	INTEGER NOT NULL,
+  "text"	TEXT,
+  "is_synced_with_cloud"	INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY("user_id") REFERENCES "user"("id"),
+  PRIMARY KEY("id" AUTOINCREMENT)
+);''';
